@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Times Table Flash Cards</title>
+  <style>
+    :root{
+      --bg:#0f172a;/* slate-900 */
+      --panel:#111827ee;/* gray-900 */
+      --muted:#94a3b8;/* slate-400 */
+      --ink:#e5e7eb;/* gray-200 */
+      --accent:#22c55e;/* green-500 */
+      --accent-2:#ef4444;/* red-500 */
+      --accent-3:#3b82f6;/* blue-500 */
+      --card:#111827;/* gray-900 */
+      --chip:#1f2937;/* gray-800 */
+      --focus:#38bdf8;/* sky-400 */
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;background:radial-gradient(1200px 800px at 80% -10%,#1f2937 0%,#0f172a 60%);
+      color:var(--ink);font:16px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial;
+      display:flex;align-items:center;justify-content:center;padding:24px;
+    }
+    .app{width:min(980px,100%);}
+    header{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:16px}
+    h1{font-size:20px;margin:0;letter-spacing:.4px}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.08);border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+    .grid{display:grid;grid-template-columns: 320px 1fr;gap:16px}
+    @media (max-width: 840px){.grid{grid-template-columns:1fr}}
+
+    /* Controls */
+    .controls{padding:16px}
+    .controls h2{font-size:14px;letter-spacing:.1em;color:var(--muted);margin:0 0 8px}
+    .row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+    .chip{background:var(--chip);border:1px solid rgba(255,255,255,.08);color:#e2e8f0;padding:8px 10px;border-radius:10px;display:inline-flex;gap:8px;align-items:center}
+    .chip input{accent-color:var(--accent)}
+    .panel{padding:12px;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06)}
+    .muted{color:var(--muted)}
+    .btn{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-weight:600;cursor:pointer}
+    .btn-primary{background:var(--accent-3);color:white}
+    .btn-ghost{background:transparent;color:var(--ink);border:1px solid rgba(255,255,255,.2)}
+    .btn[disabled]{opacity:.5;cursor:not-allowed}
+    .range{display:flex;gap:8px;align-items:center}
+    .range input[type=number]{width:72px;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:#0b1220;color:var(--ink)}
+    label.switch{display:inline-flex;align-items:center;gap:8px;cursor:pointer}
+    label.switch input{accent-color:var(--accent)}
+
+    /* Trainer */
+    .trainer{padding:16px;display:flex;flex-direction:column;gap:12px}
+    .equation{font-size: clamp(28px, 6vw, 64px);text-align:center;font-weight:800;letter-spacing:.02em}
+    .answer-row{display:flex;gap:8px;justify-content:center;align-items:center}
+    .answer-row input{
+      width:140px;font-size: clamp(18px, 4vw, 28px);text-align:center;padding:8px 12px;border-radius:12px;border:2px solid transparent;background:#0b1220;color:var(--ink);
+    }
+    .answer-row input:focus{outline:none;border-color:var(--focus);box-shadow:0 0 0 4px rgba(56,189,248,.2)}
+    .cta{display:flex;gap:8px;justify-content:center}
+    .cta .btn{font-size:16px}
+    .feedback{min-height:24px;text-align:center;font-weight:700}
+    .ok{color:var(--accent)}
+    .bad{color:var(--accent-2)}
+
+    /* Stats */
+    .stats{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+    .stat{background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.25);padding:8px 12px;border-radius:12px}
+    .progress{height:10px;border-radius:999px;background:#0b1220;border:1px solid rgba(255,255,255,.12);overflow:hidden}
+    .progress > div{height:100%;background:linear-gradient(90deg,var(--accent),#84cc16);width:0%}
+
+    footer{margin-top:8px;color:var(--muted);text-align:center;font-size:12px}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>Times Table Flash Cards</h1>
+      <div>
+        <button id="resetBtn" class="btn btn-ghost" title="Reset stats & settings">Reset</button>
+      </div>
+    </header>
+
+    <div id="screen-config" class="screen">
+      <!-- Configuration Screen -->
+      <section class="card controls" aria-label="Settings" style="max-width:960px;margin:0 auto">
+        <header style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <h2 style="letter-spacing:.12em;color:var(--muted);margin:0">CONFIGURE SESSION</h2>
+          <button id="resetBtn" class="btn btn-ghost" title="Reset saved settings">Reset Settings</button>
+        </header>
+        <div class="panel">
+          <div class="row" aria-label="Select tables">
+            <span class="muted">Tables:</span>
+            <div id="tables" class="row"></div>
+          </div>
+          <div class="row range">
+            <span class="muted">Other factor:</span>
+            <label>from <input id="minB" type="number" min="0" max="20" value="1" /></label>
+            <label>to <input id="maxB" type="number" min="1" max="20" value="12" /></label>
+          </div>
+          <div class="row">
+            <label class="switch"><input id="shuffle" type="checkbox" checked /> Shuffle</label>
+            <label class="switch"><input id="noReverse" type="checkbox" /> Avoid a×b / b×a duplicates</label>
+            <label class="switch"><input id="sound" type="checkbox" /> Sound on correct</label>
+            <label class="switch"><input id="strict" type="checkbox" /> Strict mode (Enter submits)</label>
+            <label class="switch"><input id="simpleMode" type="checkbox" /> Hide stats (Simple mode)</label>
+          </div>
+          <div class="row">
+            <button id="startBtn" class="btn btn-primary">Start Session</button>
+            <button id="quick5" class="btn btn-ghost" title="Quick 5 questions">Quick 5</button>
+            <button id="quick10" class="btn btn-ghost" title="Quick 10 questions">Quick 10</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div id="screen-play" class="screen" style="display:none">
+      <!-- Minimal Practice Screen -->
+      <section class="card trainer" aria-live="polite" style="max-width:760px;margin:0 auto;padding-top:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          <button id="backBtn" class="btn btn-ghost" title="End session & return">← Home</button>
+          <div class="stats" aria-label="Session stats (compact)">
+            <div class="stat" id="attemptsStat">0 attempts</div>
+            <div class="stat" id="correctStat">0 correct</div>
+            <div class="stat" id="accuracyStat">0% accuracy</div>
+            <div class="stat" id="streakStat">streak 0</div>
+            <div class="stat" id="timerStat">0:00</div>
+          </div>
+          <button id="resetProgressBtn" class="btn btn-ghost" title="Reset this session's progress">Reset Progress</button>
+        </div>
+
+        <div class="progress" aria-label="Progress bar" title="Progress" style="margin:0 12px 8px">
+          <div id="progressFill"></div>
+        </div>
+
+        <div class="equation" id="equation" style="margin-top:8px">Press Start to begin</div>
+        <div class="answer-row">
+          <input id="answer" type="number" inputmode="numeric" placeholder="?" disabled aria-label="Your answer" />
+        </div>
+        <div class="cta">
+          <button id="submitBtn" class="btn btn-primary" disabled>Submit</button>
+          <button id="showBtn" class="btn btn-ghost" disabled>Show Answer</button>
+          <button id="nextBtn" class="btn btn-ghost" disabled>Next</button>
+        </div>
+        <div class="feedback" id="feedback"></div>
+        <footer>
+          Tip: use <kbd>Enter</kbd> to submit, <kbd>N</kbd> for next, and <kbd>?</kbd> to show.
+        </footer>
+      </section>
+    </div>
+  </div>
+
+  <script>
+  (function(){
+    const el = id => document.getElementById(id);
+
+    // --- Elements (two screens)
+    const screenConfig = el('screen-config');
+    const screenPlay   = el('screen-play');
+
+    const tablesWrap = el('tables');
+    const minB = el('minB');
+    const maxB = el('maxB');
+    const shuffle = el('shuffle');
+    const noReverse = el('noReverse');
+    const sound = el('sound');
+    const strict = el('strict');
+    const simpleMode = el('simpleMode');
+
+    const startBtn = el('startBtn');
+    const quick5   = el('quick5');
+    const quick10  = el('quick10');
+    const resetBtn = el('resetBtn');
+    const backBtn  = el('backBtn');
+
+    const equation = el('equation');
+    const answer = el('answer');
+    const submitBtn = el('submitBtn');
+    const nextBtn = el('nextBtn');
+    const showBtn = el('showBtn');
+    const feedback = el('feedback');
+
+    const attemptsStat = el('attemptsStat');
+    const correctStat  = el('correctStat');
+    const accuracyStat = el('accuracyStat');
+    const streakStat   = el('streakStat');
+    const timerStat    = el('timerStat');
+    const progressFill = el('progressFill');
+    const resetProgressBtn = el('resetProgressBtn');
+
+    const statsBar = document.querySelector('#screen-play .stats');
+    const progressBar = document.querySelector('#screen-play .progress');
+
+    // --- State
+    let deck = [];
+    let idx = -1;
+    let current = null; // {a,b, product}
+    let attempts = 0, correct = 0, streak = 0, targetCount = 0;
+    let startedAt = 0, timerHandle = null;
+    let revealed = false;
+
+    // --- Settings persistence
+    const defaultSettings = { tables:[2,3,4,5,6,7,8,9,10], minB:1, maxB:12, shuffle:true, noReverse:false, sound:false, strict:false, simple:false };
+    const storage = {
+      load(){ try{ return JSON.parse(localStorage.getItem('ttfc-settings')) || defaultSettings }catch(e){return defaultSettings} },
+      save(s){ localStorage.setItem('ttfc-settings', JSON.stringify(s)); }
+    };
+    const state = storage.load();
+
+    // --- Build tables chips
+    function renderTableChips(){
+      tablesWrap.innerHTML = '';
+      for(let t=0;t<=12;t++){
+        const lab = document.createElement('label'); lab.className = 'chip';
+        const cb = document.createElement('input'); cb.type='checkbox'; cb.value=String(t);
+        cb.checked = state.tables.includes(t);
+        cb.addEventListener('change', ()=>{
+          if(cb.checked){ if(!state.tables.includes(t)) state.tables.push(t); }
+          else{ state.tables = state.tables.filter(x=>x!==t); }
+          storage.save(getSettings());
+        });
+        const txt = document.createElement('span'); txt.textContent = (t===0? '×0' : (t===1? '×1' : `×${t}`));
+        if(t===0 || t===1) lab.title = 'Optionally include 0s and 1s';
+        lab.append(cb, txt); tablesWrap.append(lab);
+      }
+    }
+
+    function getSettings(){
+      return {
+        tables: [...tablesWrap.querySelectorAll('input:checked')].map(i=>Number(i.value)),
+        minB: Number(minB.value||1), maxB: Number(maxB.value||12),
+        shuffle: shuffle.checked, noReverse: noReverse.checked, sound: sound.checked, strict: strict.checked, simple: simpleMode.checked,
+      };
+    }
+
+    function applySettingsToUI(){
+      renderTableChips();
+      minB.value = state.minB; maxB.value = state.maxB;
+      shuffle.checked = state.shuffle; noReverse.checked = state.noReverse;
+      sound.checked = state.sound; strict.checked = state.strict; simpleMode.checked = state.simple || false;
+    }
+    function saveSettings(){ storage.save(getSettings()); }
+    ;[minB,maxB,shuffle,noReverse,sound,strict,simpleMode].forEach(c=> c.addEventListener('change', saveSettings));
+
+    // --- Deck creation
+    function buildDeck(limit=null){
+      const s = getSettings();
+      let pairs=[];
+      for(const a of s.tables){
+        for(let b=s.minB;b<=s.maxB;b++){
+          if(s.noReverse){
+            const key = a<=b ? `${a}x${b}` : `${b}x${a}`;
+            if(pairs.some(p=>p.key===key)) continue;
+            pairs.push({a,b,key});
+          }else{ pairs.push({a,b,key:`${a}x${b}`}); }
+        }
+      }
+      if(s.shuffle){ for(let i=pairs.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [pairs[i],pairs[j]]=[pairs[j],pairs[i]]; } }
+      if(limit!=null) pairs = pairs.slice(0,limit);
+      return pairs.map(p=> ({...p, product:p.a*p.b}));
+    }
+
+    // --- Screen helpers
+    function showConfig(){ screenConfig.style.display='block'; screenPlay.style.display='none'; stopTimer(); disablePlayUI(true); equation.textContent='Press Start to begin'; feedback.textContent=''; }
+    function showPlay(){ screenConfig.style.display='none'; screenPlay.style.display='block'; const s = getSettings(); statsBar.style.display = s.simple ? 'none' : 'flex'; progressBar.style.display = s.simple ? 'none' : 'block'; }
+
+    function stopTimer(){ clearInterval(timerHandle); timerHandle=null; }
+    function startTimer(){ startedAt = Date.now(); stopTimer(); timerHandle = setInterval(()=>{
+      const t=Math.floor((Date.now()-startedAt)/1000), m=Math.floor(t/60), s=t%60; if(!getSettings().simple){ timerStat.textContent=`${m}:${String(s).padStart(2,'0')}`; } },250); }
+
+    function disablePlayUI(disabled){ answer.disabled = submitBtn.disabled = showBtn.disabled = nextBtn.disabled = disabled; }
+
+    function startSession(count=null){
+      deck = buildDeck(count); idx=-1; attempts=0; correct=0; streak=0; targetCount = deck.length; progressFill.style.width='0%'; revealed=false;
+      updateStats(); feedback.textContent=''; answer.value=''; showPlay(); disablePlayUI(false); startTimer(); next();
+    }
+
+    function resetProgress(){
+      attempts=0; correct=0; streak=0; idx=-1; progressFill.style.width='0%'; revealed=false; startTimer(); updateStats(); feedback.textContent=''; next();
+    }
+
+    function updateStats(){
+      if(!getSettings().simple){
+        attemptsStat.textContent = `${attempts} attempt${attempts===1?'':'s'}`;
+        correctStat.textContent  = `${correct} correct`;
+        accuracyStat.textContent = `${attempts? Math.round(100*correct/attempts):0}% accuracy`;
+        streakStat.textContent   = `streak ${streak}`;
+        const prog = targetCount? Math.min(100, Math.round(100*(Math.max(0,idx))/targetCount)) : 0;
+        progressFill.style.width = prog + '%';
+      }
+    }
+
+    function showCurrent(){
+      if(!current){ equation.textContent = 'All done!'; return; }
+      equation.textContent = `${current.a} × ${current.b} = ?`;
+      answer.value=''; answer.disabled=false; submitBtn.disabled=false; revealed=false; answer.focus(); updateStats();
+    }
+
+    function next(){
+      idx++;
+      if(idx>=deck.length){ finish(); return; }
+      current = deck[idx]; showCurrent();
+    }
+
+    function finish(){
+      stopTimer(); disablePlayUI(true);
+      const acc = attempts? Math.round(100*correct/attempts):0;
+      equation.textContent = `Session complete — ${correct}/${attempts} correct (${acc}%).`;
+      feedback.textContent=''; if(!getSettings().simple){ progressFill.style.width='100%'; }
+    }
+
+    // Simple right/wrong sound
+    const audio = (()=>{ let ctx; function ping(good=true){ if(!sound.checked) return; ctx = ctx || new (window.AudioContext||window.webkitAudioContext)(); const o=ctx.createOscillator(); const g=ctx.createGain(); o.type='sine'; const startF=good?660:200; const endF=good?990:120; o.frequency.setValueAtTime(startF, ctx.currentTime); o.frequency.exponentialRampToValueAtTime(endF, ctx.currentTime+0.15); g.gain.setValueAtTime(0.001, ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime+0.02); g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+0.2); o.connect(g).connect(ctx.destination); o.start(); o.stop(ctx.currentTime+0.22);} return {ping}; })();
+
+    function submit(){
+      if(!current) return;
+      if(revealed){ feedback.innerHTML = `<span class=\"muted\">(Answer was shown — press Next)</span>`; return; }
+      const val = Number(answer.value);
+      if(Number.isNaN(val)) return;
+      attempts++;
+      if(val===current.product){ correct++; streak++; feedback.innerHTML = `<span class=\"ok\">✓ Correct!</span>`; audio.ping(true); next(); }
+      else { streak=0; feedback.innerHTML = `<span class=\"bad\">✗ Not quite.</span> Try again.`; audio.ping(false); answer.select(); }
+      updateStats();
+    }
+
+    function showAnswer(){ if(!current) return; revealed=true; feedback.innerHTML = `Answer: <strong>${current.a} × ${current.b} = ${current.product}</strong>`; answer.value=current.product; answer.disabled=true; submitBtn.disabled=true; nextBtn.disabled=false; showBtn.disabled=true; }
+
+    // --- Events
+    startBtn.addEventListener('click', ()=> startSession());
+    quick5.addEventListener('click', ()=> startSession(5));
+    quick10.addEventListener('click', ()=> startSession(10));
+    submitBtn.addEventListener('click', submit);
+    nextBtn.addEventListener('click', next);
+    showBtn.addEventListener('click', showAnswer);
+    resetBtn.addEventListener('click', ()=>{ localStorage.removeItem('ttfc-settings'); location.reload(); });
+    backBtn.addEventListener('click', ()=>{ showConfig(); });
+    resetProgressBtn.addEventListener('click', resetProgress);
+
+    document.addEventListener('keydown', (e)=>{
+      if(e.key==='Enter' && !strict.checked){ submit(); }
+      if(e.key.toLowerCase()==='n'){ next(); }
+      if(e.key==='?' || (e.shiftKey && e.key==='/')){ showAnswer(); }
+    });
+
+    document.querySelector('#screen-play .trainer').addEventListener('click', ()=>{ if(!answer.disabled) answer.focus(); });
+
+    // Initialize
+    applySettingsToUI(); showConfig();
+  })();
+  </script>
+</body>
+</html>
