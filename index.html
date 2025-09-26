@@ -24,12 +24,10 @@
       color:var(--ink);font:16px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial;
       display:flex;align-items:center;justify-content:center;padding:24px;
     }
-    .app{width:min(980px,100%);}
+    .app{width:min(980px,100%);} 
     header{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:16px}
     h1{font-size:20px;margin:0;letter-spacing:.4px}
     .card{background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.08);border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
-    .grid{display:grid;grid-template-columns: 320px 1fr;gap:16px}
-    @media (max-width: 840px){.grid{grid-template-columns:1fr}}
 
     /* Controls */
     .controls{padding:16px}
@@ -76,17 +74,14 @@
     <header>
       <h1>Times Table Flash Cards</h1>
       <div>
-        <button id="resetBtn" class="btn btn-ghost" title="Reset stats & settings">Reset</button>
+        <button id="resetBtn" class="btn btn-ghost" title="Reset saved settings">Reset Settings</button>
       </div>
     </header>
 
     <div id="screen-config" class="screen">
       <!-- Configuration Screen -->
       <section class="card controls" aria-label="Settings" style="max-width:960px;margin:0 auto">
-        <header style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-          <h2 style="letter-spacing:.12em;color:var(--muted);margin:0">CONFIGURE SESSION</h2>
-          <button id="resetBtn" class="btn btn-ghost" title="Reset saved settings">Reset Settings</button>
-        </header>
+        <h2 style="letter-spacing:.12em;color:var(--muted);margin:0">CONFIGURE SESSION</h2>
         <div class="panel">
           <div class="row" aria-label="Select tables">
             <span class="muted">Tables:</span>
@@ -98,13 +93,11 @@
             <label>to <input id="maxB" type="number" min="1" max="20" value="12" /></label>
           </div>
           <div class="row">
-            <label class="switch"><input id="shuffle" type="checkbox" checked /> Shuffle</label>
-            <label class="switch"><input id="noReverse" type="checkbox" /> Avoid a×b / b×a duplicates</label>
+            <label class="switch"><input id="shuffle" type="checkbox" checked /> Shuffle (random card order)</label>
             <label class="switch"><input id="sound" type="checkbox" /> Sound on correct</label>
             <label class="switch"><input id="strict" type="checkbox" /> Strict mode (Enter submits)</label>
             <label class="switch"><input id="simpleMode" type="checkbox" /> Hide stats (Simple mode)</label>
             <label class="switch"><input id="schoolOrder" type="checkbox" /> School order (m × n)</label>
-            <label class="switch"><input id="randomOrder" type="checkbox" /> Randomize factor order
           </div>
           <div class="row">
             <button id="startBtn" class="btn btn-primary">Start Session</button>
@@ -163,12 +156,10 @@
     const minB = el('minB');
     const maxB = el('maxB');
     const shuffle = el('shuffle');
-    const noReverse = el('noReverse');
     const sound = el('sound');
     const strict = el('strict');
     const simpleMode = el('simpleMode');
     const schoolOrder = el('schoolOrder');
-    const randomOrder = el('randomOrder');
 
     const startBtn = el('startBtn');
     const quick5   = el('quick5');
@@ -203,12 +194,13 @@
     let revealed = false;
 
     // --- Settings persistence
-    const defaultSettings = { tables:[2,3,4,5,6,7,8,9,10], minB:1, maxB:12, shuffle:true, noReverse:false, sound:false, strict:false, simple:false, school:false, randomOrder:false };
+    const defaultSettings = { tables:[2,3,4,5,6,7,8,9,10], minB:1, maxB:12, shuffle:true, sound:false, strict:false, simple:false, school:false };
     const storage = {
       load(){ try{ return JSON.parse(localStorage.getItem('ttfc-settings')) || defaultSettings }catch(e){return defaultSettings} },
       save(s){ localStorage.setItem('ttfc-settings', JSON.stringify(s)); }
     };
-    const state = storage.load();
+    let state = storage.load();
+    if(!Array.isArray(state.tables)) state.tables = defaultSettings.tables.slice();
 
     // --- Build tables chips
     function renderTableChips(){
@@ -232,18 +224,21 @@
       return {
         tables: [...tablesWrap.querySelectorAll('input:checked')].map(i=>Number(i.value)),
         minB: Number(minB.value||1), maxB: Number(maxB.value||12),
-        shuffle: shuffle.checked, noReverse: noReverse.checked, sound: sound.checked, strict: strict.checked, simple: simpleMode.checked, school: schoolOrder.checked, randomOrder: randomOrder.checked,
+        shuffle: shuffle.checked, sound: sound.checked, strict: strict.checked, simple: simpleMode.checked, school: schoolOrder.checked,
       };
     }
 
     function applySettingsToUI(){
       renderTableChips();
       minB.value = state.minB; maxB.value = state.maxB;
-      shuffle.checked = state.shuffle; noReverse.checked = state.noReverse;
-      sound.checked = state.sound; strict.checked = state.strict; simpleMode.checked = state.simple || false; schoolOrder.checked = state.school || false; randomOrder.checked = state.randomOrder || false; randomOrder.disabled = schoolOrder.checked;
+      shuffle.checked = state.shuffle;
+      sound.checked = state.sound; 
+      strict.checked = state.strict; 
+      simpleMode.checked = state.simple || false; 
+      schoolOrder.checked = state.school || false;
     }
     function saveSettings(){ storage.save(getSettings()); }
-    ;[minB,maxB,shuffle,noReverse,sound,strict,simpleMode,schoolOrder,randomOrder].forEach(c=> c.addEventListener('change', saveSettings));
+    ;[minB,maxB,shuffle,sound,strict,simpleMode,schoolOrder].forEach(c=> c.addEventListener('change', saveSettings));
 
     // --- Deck creation
     function buildDeck(limit=null){
@@ -251,11 +246,7 @@
       let pairs=[];
       for(const a of s.tables){
         for(let b=s.minB;b<=s.maxB;b++){
-          if(s.noReverse){
-            const key = a<=b ? `${a}x${b}` : `${b}x${a}`;
-            if(pairs.some(p=>p.key===key)) continue;
-            pairs.push({a,b,key});
-          }else{ pairs.push({a,b,key:`${a}x${b}`}); }
+          pairs.push({a,b,key:`${a}x${b}`});
         }
       }
       if(s.shuffle){ for(let i=pairs.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [pairs[i],pairs[j]]=[pairs[j],pairs[i]]; } }
@@ -295,13 +286,13 @@
 
     function showCurrent(){
       if(!current){ equation.textContent = 'All done!'; return; }
-      // Determine display order
+      // Determine display order (school vs random)
       const s = getSettings();
       let left = current.a, right = current.b;
       if(s.school){ left = current.b; right = current.a; }
-      else if(s.randomOrder){ if(Math.random()<0.5){ left = current.b; right = current.a; } }
+      else { if(Math.random()<0.5){ left = current.b; right = current.a; } }
       current._left = left; current._right = right; // remember for Show Answer
-      equation.textContent = `${left} × ${right} = ?`;
+      equation.textContent = left + ' × ' + right + ' = ?';
       answer.value=''; answer.disabled=false; submitBtn.disabled=false; revealed=false; answer.focus(); updateStats();
     }
 
@@ -323,12 +314,12 @@
 
     function submit(){
       if(!current) return;
-      if(revealed){ feedback.innerHTML = `<span class=\"muted\">(Answer was shown — press Next)</span>`; return; }
+      if(revealed){ feedback.innerHTML = '<span class="muted">(Answer was shown — press Next)</span>'; return; }
       const val = Number(answer.value);
       if(Number.isNaN(val)) return;
       attempts++;
-      if(val===current.product){ correct++; streak++; feedback.innerHTML = `<span class=\"ok\">✓ Correct!</span>`; audio.ping(true); next(); }
-      else { streak=0; feedback.innerHTML = `<span class=\"bad\">✗ Not quite.</span> Try again.`; audio.ping(false); answer.select(); }
+      if(val===current.product){ correct++; streak++; feedback.innerHTML = '<span class="ok">✓ Correct!</span>'; audio.ping(true); next(); }
+      else { streak=0; feedback.innerHTML = '<span class="bad">✗ Not quite.</span> Try again.'; audio.ping(false); answer.select(); }
       updateStats();
     }
 
@@ -337,14 +328,13 @@
       revealed = true;
       const left = current._left ?? current.a;
       const right = current._right ?? current.b;
-      // Use plain string concat to avoid any backtick/template literal issues
       feedback.innerHTML = 'Answer: <strong>' + left + ' × ' + right + ' = ' + current.product + '</strong>';
       answer.value = current.product;
       answer.disabled = true;
       submitBtn.disabled = true;
       nextBtn.disabled = false;
       showBtn.disabled = true;
-    } × ${right} = ${current.product}</strong>`; answer.value=current.product; answer.disabled=true; submitBtn.disabled=true; nextBtn.disabled=false; showBtn.disabled=true; } × ${current.b} = ${current.product}</strong>`; answer.value=current.product; answer.disabled=true; submitBtn.disabled=true; nextBtn.disabled=false; showBtn.disabled=true; }
+    }
 
     // --- Events
     startBtn.addEventListener('click', ()=> startSession());
@@ -359,13 +349,6 @@
 
     document.addEventListener('keydown', (e)=>{
       if(e.key==='Enter' && !strict.checked){ submit(); }
-      if(e.key.toLowerCase()==='n'){ next(); }
-      if(e.key==='?' || (e.shiftKey && e.key==='/')){ showAnswer(); }
-    });
-
-    // Keep randomOrder and schoolOrder mutually exclusive in UI
-    schoolOrder.addEventListener('change', ()=>{ if(schoolOrder.checked){ randomOrder.checked=false; randomOrder.disabled=true; } else { randomOrder.disabled=false; } saveSettings(); });
-    randomOrder.addEventListener('change', ()=>{ if(randomOrder.checked){ schoolOrder.checked=false; } saveSettings(); }); }
       if(e.key.toLowerCase()==='n'){ next(); }
       if(e.key==='?' || (e.shiftKey && e.key==='/')){ showAnswer(); }
     });
